@@ -86,21 +86,41 @@ def mark_attendance(group_photo_path: str, threshold: float = 0.45):
     
     return attendance
 
+def visualize_detections(group_photo_path: str, output_path: str = "detections.jpg"):
+    img = cv2.imread(group_photo_path)
+    faces = app.get(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    
+    for i, face in enumerate(faces):
+        box = face.bbox.astype(int)
+        conf = face.det_score
+        
+        # Draw bounding box
+        cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
+        
+        # Label with face index and confidence
+        label = f"#{i+1} {conf:.2f}"
+        cv2.putText(img, label, (box[0], box[1] - 8),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+    
+    cv2.imwrite(output_path, img)
+    print(f"Saved detection output to: {output_path} ({len(faces)} faces drawn)")
+
 
 def main():
-    print("Trying tp register students")
-    register_student("../photos/qazi.png", "B22CS087", "Qazi Talha Ali")
-    print("Qazi registered successfully")
+    # print("Trying tp register students")
+    # register_student("../photos/qazi.png", "B22CS087", "Qazi Talha Ali")
+    # print("Qazi registered successfully")
 
-    register_student("../photos/pari.png", "B22CS039", "Pari sharma")
-    print("Pari registered successfully")
-    register_student("../photos/chinmay.png", "B22BB001", "Chinmay Vashisth")
-    print("Chinmay registered successfully")
-    register_student("../photos/vignesh.png", "B22CS099", "Vignesh something something")
-    print("Vignesh registered successfully")
+    # register_student("../photos/pari.png", "B22CS039", "Pari sharma")
+    # print("Pari registered successfully")
+    # register_student("../photos/chinmay.png", "B22BB001", "Chinmay Vashisth")
+    # print("Chinmay registered successfully")
+    # register_student("../photos/vignesh.png", "B22CS099", "Vignesh something something")
+    # print("Vignesh registered successfully")
 
     print("\nTrying to mark attendance from group photo")
     mark_attendance("../photos/group.png", 0.25)
+    print(visualize_detections("../photos/group.png", "group_detections.jpg"))
 
 if __name__=='__main__':
     main()
