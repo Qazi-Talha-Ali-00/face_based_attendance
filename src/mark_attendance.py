@@ -1,27 +1,39 @@
-def register_student(image_path: str, roll_number: str, name: str):
-    img = cv2.imread(image_path)
+def mark_attendance(group_photo_path: str, threshold: float = 0.45):
+    img = cv2.imread(group_photo_path)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     
     faces = app.get(img)
+    print(f"Detected {len(faces)} faces in photo")
     
-    if len(faces) == 0:
-        print(f"No face detected for {name}")
-        return False
-    if len(faces) > 1:
-        print(f"Multiple faces detected — use a solo photo for registration")
-        return False
+    attendance = []
+    unrecognized = 0
     
-    embedding = faces[0].embedding  # 512-d ArcFace vector
-    embedding = embedding / np.linalg.norm(embedding)  # normalize before storing
+    for face in faces:
+        embedding = face.embedding
+        embedding = embedding / np.linalg.norm(embedding)
+        
+        results = collection.query(
+            query_embeddings=[embedding.tolist()],
+            n_results=1
+        )
+        
+        distance = results['distances'][0][0]
+        similarity = 1 - distance  # chromadb cosine returns distance not similarity
+        
+        if similarity >= threshold:
+            meta = results['metadatas'][0][0]
+            attendance.append({
+                "roll": meta['roll'],
+                "name": meta['name'],
+                "similarity": round(similarity, 3)
+            })
+        else:
+            unrecognized += 1
     
-    collection.add(
-        embeddings=[embedding.tolist()],
-        ids=[roll_number],                          # roll number as unique ID
-        metadatas=[{"name": name, "roll": roll_number}]
-    )
+    print(f"\nAttendance Marked: {len(attendance)} students")
+    print(f"Unrecognized faces: {unrecognized}")
     
-    print(f"Registered {name} ({roll_number}) successfully")
-    return True
-
-# Usage
-register_student("john_photo.jpg", "CS2021001", "John Doe")
+    for record in attendance:
+        print(f"  ✓ {record['name']} ({record['roll']}) — confidence: {record['similarity']}")
+    
+    return attendance
